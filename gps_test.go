@@ -36,7 +36,7 @@ func TestParseGPS(t *testing.T) {
 
 func TestParseCoord(t *testing.T) {
 	coord := "17.0901"
-	hemi := "W"
+	hemi := "S"
 	expected := float64(-17.0901)
 	result, err := ParseCoord(coord, hemi)
 	if err != nil {
