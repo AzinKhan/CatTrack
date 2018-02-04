@@ -59,6 +59,8 @@ func (data *GPSdata) ParseGPS(outputline string) error {
 	}
 	if splitz[2] == "A" {
 		data.Active = true
+	} else {
+		return fmt.Errorf("No fix yet")
 	}
 	data.latitude, err = ParseCoord(splitz[3], splitz[4])
 	if err != nil {
@@ -148,8 +150,6 @@ func main() {
 					log.Println("Time:\t", data.timestamp)
 					log.Println("Speed/kmh :\t", data.speed)
 					log.Println("Bearing:\t", data.angle, "\n")
-				} else {
-					log.Println("No fix found yet")
 				}
 			}
 		}
