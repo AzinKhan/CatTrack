@@ -55,3 +55,15 @@ func TestParseGPSReturnsError(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestParseCoordReturnsError(t *testing.T) {
+	wrongCoordInput := "Not a number"
+	zero, err := ParseCoord(wrongCoordInput, "E")
+	if zero != 0 {
+		t.Fail()
+	}
+	if err == nil {
+		t.Fail()
+	}
+
+}

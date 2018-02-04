@@ -2,20 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/tarm/serial"
 	"log"
 	"strconv"
 	"strings"
 	"time"
 )
-
-/*
-
-TO DO
-
-Optimize CPU utilization.
-
-*/
 
 var UARTPort string
 
@@ -41,8 +34,6 @@ func init() {
 }
 
 func ParseCoord(coord, hemi string) (float64, error) {
-	// TO DO:
-	// Convert to decimal lat long
 	coordinate, err := strconv.ParseFloat(coord, 64)
 	if err != nil {
 		return 0, err
@@ -58,6 +49,9 @@ func ParseCoord(coord, hemi string) (float64, error) {
 
 func (data *GPSdata) ParseGPS(outputline string) error {
 	splitz := strings.Split(outputline, ",")
+	if len(splitz) != 13 {
+		return fmt.Errorf("Not an expected input:\n", splitz)
+	}
 	var err error
 	data.timestamp, err = time.Parse(layout, (splitz[9] + splitz[1]))
 	if err != nil {
