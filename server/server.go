@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,11 +11,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 var port, webfile string
 
 const layout string = "020106150405.000"
+
+const unit float64 = 0.0000005
 
 // GPS gives speed in knots so convert to km/h
 const knotRatio float64 = 1.852001
@@ -36,8 +39,24 @@ type GPSdata struct {
 	mutex     sync.Mutex
 }
 
+func Round(x, unit float64) float64 {
+	return float64(int64(x/unit+0.5)) * unit
+}
+
+// GPS gives DDMM.MMMM format output
 func ParseCoord(coord, hemi string) (float64, error) {
-	coordinate, err := strconv.ParseFloat(coord, 64)
+	minuteString := coord[2:]
+	degreeString := coord[:2]
+	minutes, err := strconv.ParseFloat(minuteString, 64)
+	if err != nil {
+		return 0, err
+	}
+	degrees, err := strconv.ParseFloat(degreeString, 64)
+	// Convert to decimal
+	coordinate := degrees + Round((minutes/60.0), unit)
+	coordinate = Round(coordinate, unit)
+	coordinateString := fmt.Sprintf("%.6f", coordinate)
+	coordinate, err = strconv.ParseFloat(coordinateString, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -53,7 +72,7 @@ func ParseCoord(coord, hemi string) (float64, error) {
 func (data *GPSdata) ParseGPS(outputline string) error {
 	splitz := strings.Split(outputline, ",")
 	if len(splitz) != 13 {
-		return fmt.Errorf("Not an expected input:\n", splitz)
+		return fmt.Errorf("not an expected input %v", splitz)
 	}
 	var err error
 	data.Timestamp, err = time.Parse(layout, (splitz[9] + splitz[1]))
@@ -95,6 +114,7 @@ func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
+			log.Println("Handling POST request from", r.RemoteAddr)
 			data.mutex.Lock()
 			r.ParseForm()
 			u := r.FormValue("Output")
@@ -111,8 +131,10 @@ func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 				w.WriteHeader(200)
 				w.Write([]byte("Location updated"))
 			}
+			r.Close = true
 			data.mutex.Unlock()
 		case "GET":
+			log.Println("Handling GET request from", r.RemoteAddr)
 			data.mutex.Lock()
 			dataBytes, err := json.Marshal(data)
 			data.mutex.Unlock()
@@ -123,10 +145,12 @@ func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 			}
 			w.WriteHeader(200)
 			w.Write(dataBytes)
+			r.Close = true
 		default:
 			w.WriteHeader(400)
 			errstring := fmt.Sprintf("%v method not supported", r.Method)
 			w.Write([]byte(errstring))
+			r.Close = true
 		}
 	}
 }

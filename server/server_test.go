@@ -22,8 +22,8 @@ func TestUpdateMarkerGet(t *testing.T) {
 	defer tearDown()
 	tempo, _ := time.Parse(layout, "030218224537.000")
 	fakeGPSdata := GPSdata{
-		Latitude:  float64(5125.0399),
-		Longitude: float64(-17.0901),
+		Latitude:  float64(51.417331),
+		Longitude: float64(-0.284835),
 		Timestamp: tempo,
 		Active:    true,
 		Speed:     float64(0.29 * 1.852001),
@@ -73,8 +73,8 @@ func TestUpdateMarkerPost(t *testing.T) {
 	}
 	tempo, _ := time.Parse(layout, "030218224537.000")
 	expected := GPSdata{
-		Latitude:  float64(5125.0399),
-		Longitude: float64(-17.0901),
+		Latitude:  float64(51.417331),
+		Longitude: float64(-0.284835),
 		Timestamp: tempo,
 		Active:    true,
 		Speed:     float64(0.29 * 1.852001),
@@ -90,10 +90,11 @@ func TestParseGPS(t *testing.T) {
 	var fakeGPSdata GPSdata
 	testLine := "GPRMC,224537.000,A,5125.0399,N,00017.0901,W,0.29,103.93,030218,,,D*79"
 	fakeGPSdata.ParseGPS(testLine)
+	log.Println("Fake", fakeGPSdata)
 	tempo, _ := time.Parse(layout, "030218224537.000")
 	expected := GPSdata{
-		Latitude:  float64(5125.0399),
-		Longitude: float64(-17.0901),
+		Latitude:  float64(51.417331),
+		Longitude: float64(-0.284835),
 		Timestamp: tempo,
 		Active:    true,
 		Speed:     float64(0.29 * 1.852001),
@@ -105,14 +106,16 @@ func TestParseGPS(t *testing.T) {
 }
 
 func TestParseCoord(t *testing.T) {
-	coord := "17.0901"
+	coord := "5125.0399"
 	hemi := "S"
-	expected := float64(-17.0901)
+	expected := float64(-51.417331)
 	result, err := ParseCoord(coord, hemi)
 	if err != nil {
 		t.Fail()
 	}
 	if result != expected {
+		log.Println("Result:\t", result)
+		log.Println("Expected:\t", expected)
 		t.Fail()
 	}
 }
