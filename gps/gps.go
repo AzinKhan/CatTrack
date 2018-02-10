@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/tarm/serial"
 )
@@ -74,7 +75,10 @@ func main() {
 		if strings.Contains(gpsOut, "GPRMC") {
 			urlData := url.Values{}
 			urlData.Add("Output", gpsOut)
-			resp, err := http.PostForm(serverIP+"/marker", urlData)
+			client := http.Client{
+				Timeout: 3 * time.Second,
+			}
+			resp, err := client.PostForm(serverIP+"/marker", urlData)
 			if err != nil {
 				log.Println(err)
 			}

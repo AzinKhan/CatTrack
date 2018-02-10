@@ -157,13 +157,20 @@ func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 
 func main() {
 	flag.Parse()
-	server := mux.NewRouter()
+	router := mux.NewRouter()
 	var latestData GPSdata
 	//server := http.NewServeMux()
-	server.HandleFunc("/map", SendMap)
+	router.HandleFunc("/map", SendMap)
 	// This receives the post requests
-	server.HandleFunc("/marker", UpdateMarker(&latestData))
-	log.Println("Starting HTTP server on port", port)
+	router.HandleFunc("/marker", UpdateMarker(&latestData))
 	address := fmt.Sprintf("0.0.0.0:%v", port)
-	log.Fatal(http.ListenAndServe(address, server))
+	server := &http.Server{
+		Addr:         address,
+		ReadTimeout:  3 * time.Second,
+		WriteTimeout: 3 * time.Second,
+		IdleTimeout:  3 * time.Second,
+		Handler:      router,
+	}
+	log.Println("Starting HTTP server on port", port)
+	log.Fatal(server.ListenAndServe())
 }
