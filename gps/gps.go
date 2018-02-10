@@ -75,14 +75,15 @@ func main() {
 		if strings.Contains(gpsOut, "GPRMC") {
 			urlData := url.Values{}
 			urlData.Add("Output", gpsOut)
-			client := http.Client{
+			client := &http.Client{
 				Timeout: 3 * time.Second,
 			}
 			resp, err := client.PostForm(serverIP+"/marker", urlData)
 			if err != nil {
 				log.Println(err)
+			} else {
+				resp.Body.Close()
 			}
-			defer resp.Body.Close()
 
 		}
 	}
