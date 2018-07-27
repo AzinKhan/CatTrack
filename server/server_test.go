@@ -27,7 +27,7 @@ func TestUpdateMarkerGet(t *testing.T) {
 		Timestamp: tempo,
 		Active:    true,
 		Speed:     float64(0.29 * 1.852001),
-		Angle:     float64(103.93),
+		Bearing:   float64(103.93),
 	}
 	mux.HandleFunc("/marker", UpdateMarker(&fakeGPSdata))
 	response, err := http.Get(serverURL + "/marker")
@@ -78,7 +78,7 @@ func TestUpdateMarkerPost(t *testing.T) {
 		Timestamp: tempo,
 		Active:    true,
 		Speed:     float64(0.29 * 1.852001),
-		Angle:     float64(103.93),
+		Bearing:   float64(103.93),
 	}
 	if fakeGPSdata != expected {
 		t.Fail()
@@ -98,7 +98,7 @@ func TestParseGPS(t *testing.T) {
 		Timestamp: tempo,
 		Active:    true,
 		Speed:     float64(0.29 * 1.852001),
-		Angle:     float64(103.93),
+		Bearing:   float64(103.93),
 	}
 	if fakeGPSdata != expected {
 		t.Fail()

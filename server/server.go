@@ -35,10 +35,11 @@ type GPSdata struct {
 	Timestamp time.Time
 	Active    bool
 	Speed     float64
-	Angle     float64
+	Bearing   float64
 	mutex     sync.Mutex
 }
 
+// Round implements a rounding feature not available in Go 1.9
 func Round(x, unit float64) float64 {
 	return float64(int64(x/unit+0.5)) * unit
 }
@@ -60,6 +61,7 @@ func ParseCoord(coord, hemi string) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
+	// Change sign of co-ordinate if either in West or South hemisphere
 	switch hemi {
 	case "W":
 		coordinate = -1.0 * coordinate
@@ -70,6 +72,7 @@ func ParseCoord(coord, hemi string) (float64, error) {
 }
 
 func (data *GPSdata) ParseGPS(outputline string) error {
+	// The data come as one string delineated by commas
 	splitz := strings.Split(outputline, ",")
 	if len(splitz) != 13 {
 		return fmt.Errorf("not an expected input %v", splitz)
@@ -93,12 +96,12 @@ func (data *GPSdata) ParseGPS(outputline string) error {
 		return err
 	}
 	knotspeed, err := strconv.ParseFloat(splitz[7], 64)
-	// Convert to km/h
-	data.Speed = knotspeed * knotRatio
 	if err != nil {
 		return err
 	}
-	data.Angle, err = strconv.ParseFloat(splitz[8], 64)
+	// Convert to km/h
+	data.Speed = knotspeed * knotRatio
+	data.Bearing, err = strconv.ParseFloat(splitz[8], 64)
 	if err != nil {
 		return err
 	}
@@ -159,7 +162,6 @@ func main() {
 	flag.Parse()
 	router := mux.NewRouter()
 	var latestData GPSdata
-	//server := http.NewServeMux()
 	router.HandleFunc("/map", SendMap)
 	// This receives the post requests
 	router.HandleFunc("/marker", UpdateMarker(&latestData))

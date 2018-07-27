@@ -27,7 +27,10 @@ func Readline(port *serial.Port) string {
 	// Wait for the start character - $
 firstLoop:
 	for {
-		n, _ := port.Read(buf)
+		n, err := port.Read(buf)
+		if err != nil {
+			log.Fatal(err)
+		}
 		if n > 0 {
 			if string(buf[0]) == "$" {
 				break firstLoop
@@ -36,7 +39,10 @@ firstLoop:
 	}
 mainloop:
 	for {
-		n, _ := port.Read(buf)
+		n, err := port.Read(buf)
+		if err != nil {
+			log.Fatal(err)
+		}
 		if n > 0 {
 			onebuf := string(buf[0])
 			if onebuf == "\n" || onebuf == "\r" {
@@ -81,9 +87,12 @@ func main() {
 			resp, err := client.PostForm(serverIP+"/marker", urlData)
 			if err != nil {
 				log.Println(err)
-			} else {
-				resp.Body.Close()
+				// Continue if there is an error
+				// This avoids null pointer panics when trying to close the response body below
+				// TODO: Add checks to see if the resp exists before continuing
+				continue
 			}
+			resp.Body.Close()
 
 		}
 	}
