@@ -1,4 +1,4 @@
 bin/*
 *.swp
 *.swo
-server/creds.txt
+server/ui
