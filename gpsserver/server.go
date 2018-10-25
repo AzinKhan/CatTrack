@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// Port is the listening port for the server
 var Port, webfile string
 
 const layout string = "020106150405.000"
