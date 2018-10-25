@@ -1,6 +1,6 @@
 language: go
 go:
-  - "1.9x"
+  - "1.9.x"
 
 env:
   - CODECOV_TOKEN="7b4cdc23-2deb-4a04-b47a-864ad3e313c5"
