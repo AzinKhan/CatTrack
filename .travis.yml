@@ -1,0 +1,14 @@
+language: go
+go:
+  - "1.9x"
+
+env:
+  - CODECOV_TOKEN="7b4cdc23-2deb-4a04-b47a-864ad3e313c5"
+install:
+  - go get -t ./...
+
+script:
+  - ./run_tests.sh
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
