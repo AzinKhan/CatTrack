@@ -1,4 +1,4 @@
-package main
+package gpsserver
 
 import (
 	"encoding/json"
@@ -11,11 +11,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/gorilla/mux"
 )
 
-var port, webfile string
+var Port, webfile string
 
 const layout string = "020106150405.000"
 
@@ -25,7 +23,7 @@ const unit float64 = 0.0000005
 const knotRatio float64 = 1.852001
 
 func init() {
-	flag.StringVar(&port, "p", "8000", "Port for HTTP server")
+	flag.StringVar(&Port, "p", "8000", "Port for HTTP server")
 	flag.StringVar(&webfile, "f", "", "HTML file to serve")
 }
 
@@ -156,23 +154,4 @@ func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 			r.Close = true
 		}
 	}
-}
-
-func main() {
-	flag.Parse()
-	router := mux.NewRouter()
-	var latestData GPSdata
-	router.HandleFunc("/map", SendMap)
-	// This receives the post requests
-	router.HandleFunc("/marker", UpdateMarker(&latestData))
-	address := fmt.Sprintf("0.0.0.0:%v", port)
-	server := &http.Server{
-		Addr:         address,
-		ReadTimeout:  3 * time.Second,
-		WriteTimeout: 3 * time.Second,
-		IdleTimeout:  3 * time.Second,
-		Handler:      router,
-	}
-	log.Println("Starting HTTP server on port", port)
-	log.Fatal(server.ListenAndServe())
 }

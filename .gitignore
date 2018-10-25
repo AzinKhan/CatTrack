@@ -1,4 +1,3 @@
-bin/*
 *.swp
 *.swo
-server/ui
+gpsserver/ui
