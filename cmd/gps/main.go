@@ -1,4 +1,3 @@
-//+build !test
 package main
 
 import (
@@ -9,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/azinkhan/cattrack/gps"
+	"github.com/AzinKhan/CatTrack/gps"
 )
 
 func main() {
