@@ -28,6 +28,8 @@ func init() {
 	flag.StringVar(&webfile, "f", "", "HTML file to serve")
 }
 
+// GPSdata is a container for all of the information contained in the
+// output from gps
 type GPSdata struct {
 	Latitude  float64
 	Longitude float64
@@ -43,7 +45,8 @@ func Round(x, unit float64) float64 {
 	return float64(int64(x/unit+0.5)) * unit
 }
 
-// GPS gives DDMM.MMMM format output
+// ParseCoord converts the co-ordinates from the gps module to those
+// understandable by GoogleMaps. GPS gives DDMM.MMMM format output
 func ParseCoord(coord, hemi string) (float64, error) {
 	minuteString := coord[2:]
 	degreeString := coord[:2]
@@ -70,6 +73,8 @@ func ParseCoord(coord, hemi string) (float64, error) {
 	return coordinate, nil
 }
 
+// ParseGPS takes the output from gps and populates a GPSdata struct with
+// the relevant values.
 func (data *GPSdata) ParseGPS(outputline string) error {
 	// The data come as one string delineated by commas
 	splitz := strings.Split(outputline, ",")
@@ -107,11 +112,14 @@ func (data *GPSdata) ParseGPS(outputline string) error {
 	return nil
 }
 
+// SendMap is a handler for the website. It serves the webpage.
 func SendMap(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving website to", r.RemoteAddr)
 	http.ServeFile(w, r, webfile)
 }
 
+// UpdateMarker handles requests that read from or write to the current GPSdata
+// held in memory.
 func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
