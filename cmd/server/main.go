@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"cattrack/gpsserver"
+	"github.com/azinkhan/cattrack/gpsserver"
 
 	"github.com/gorilla/mux"
 )

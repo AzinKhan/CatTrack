@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"cattrack/gps"
+	"github.com/azinkhan/cattrack/gps"
 )
 
 func main() {
