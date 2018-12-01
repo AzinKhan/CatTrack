@@ -27,6 +27,7 @@ func main() {
 			client := &http.Client{
 				Timeout: 3 * time.Second,
 			}
+			log.Printf("Read GPS output: %+v", gpsOut)
 			resp, err := client.PostForm(gps.ServerIP+"/marker", urlData)
 			if err != nil {
 				log.Println(err)

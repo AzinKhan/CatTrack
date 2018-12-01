@@ -12,7 +12,7 @@ var UARTPort, ServerIP string
 
 func init() {
 	flag.StringVar(&UARTPort, "port", "/dev/ttyS0", "Serial port for connection")
-	flag.StringVar(&ServerIP, "s", "localhost:8000", "Address of remote server")
+	flag.StringVar(&ServerIP, "s", "http://localhost:8000", "Address of remote server")
 }
 
 // Readline takes a serial port and waits for a starting character, $

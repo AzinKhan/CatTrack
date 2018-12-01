@@ -89,6 +89,7 @@ func (data *GPSdata) ParseGPS(outputline string) error {
 	if splitz[2] == "A" {
 		data.Active = true
 	} else {
+		log.Println("No fix yet")
 		return fmt.Errorf("No fix yet")
 	}
 	data.Latitude, err = ParseCoord(splitz[3], splitz[4])
@@ -134,12 +135,15 @@ func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 			}
 			err = data.ParseGPS(rawData)
 			if err != nil {
-				w.WriteHeader(400)
+				w.WriteHeader(http.StatusBadRequest)
 				errstring := fmt.Sprintf("Error parsing gps output: %v", err)
 				w.Write([]byte(errstring))
 			} else {
-				w.WriteHeader(200)
+				w.WriteHeader(http.StatusOK)
 				w.Write([]byte("Location updated"))
+			}
+			if data.Active {
+				log.Printf("Lat: %+v, Long: %+v, Time: %+v", data.Latitude, data.Longitude, data.Timestamp)
 			}
 			r.Close = true
 			data.mutex.Unlock()
@@ -149,15 +153,16 @@ func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 			dataBytes, err := json.Marshal(data)
 			data.mutex.Unlock()
 			if err != nil {
-				w.WriteHeader(404)
+				w.WriteHeader(http.StatusNotFound)
 				errstring := fmt.Sprintf("Error retrieving location: %v", err)
 				w.Write([]byte(errstring))
+				return
 			}
-			w.WriteHeader(200)
+			w.WriteHeader(http.StatusOK)
 			w.Write(dataBytes)
 			r.Close = true
 		default:
-			w.WriteHeader(400)
+			w.WriteHeader(http.StatusBadRequest)
 			errstring := fmt.Sprintf("%v method not supported", r.Method)
 			w.Write([]byte(errstring))
 			r.Close = true
