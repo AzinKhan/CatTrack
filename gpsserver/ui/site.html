@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
+	   integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+	   crossorigin=""/>
+    <style>
+       #map {
+        height: 800px;
+        width: 100%;
+       }
+	</style>
+	 <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
+	   integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
+	   crossorigin=""></script>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      async function initMap() {
+        var map = L.map('map').setView([51.417451, -0.09], 18);
+        var marker = L.marker([51.417451, -0.09]).addTo(map);
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: 19,
+			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+		}).addTo(map);
+        while (1 > 0) {
+          newpos = getLocation(map, marker);
+          marker.setLatLng(newpos);
+          map.panTo(newpos);
+          await sleep(1000)
+        }
+      }
+
+      function getLocation(map, marker) {
+          var gpsInfo = httpGet("http://192.168.0.26:8000/marker");
+          var location = new L.latLng(gpsInfo.Latitude, gpsInfo.Longitude);
+          return location;
+      }
+
+      function httpGet(URL) {
+        var req = new XMLHttpRequest();
+        req.open("GET", URL, false);
+        req.send(null);
+        result = req.responseText;
+        req.abort();
+        return JSON.parse(result);
+      }
+
+      function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms))
+      }
+    initMap();
+    </script>
+  </body>
+</html>
