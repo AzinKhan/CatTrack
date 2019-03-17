@@ -121,12 +121,13 @@ func SendMap(w http.ResponseWriter, r *http.Request) {
 
 // UpdateMarker handles requests that read from or write to the current GPSdata
 // held in memory.
-func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
+func UpdateMarker(data *GPSdata) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "POST":
 			log.Println("Handling POST request from", r.RemoteAddr)
 			data.mutex.Lock()
+			defer data.mutex.Unlock()
 			r.ParseForm()
 			u := r.FormValue("Output")
 			rawData, err := url.QueryUnescape(u)
@@ -135,9 +136,8 @@ func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 			}
 			err = data.ParseGPS(rawData)
 			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
 				errstring := fmt.Sprintf("Error parsing gps output: %v", err)
-				w.Write([]byte(errstring))
+				http.Error(w, errstring, http.StatusBadRequest)
 			} else {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte("Location updated"))
@@ -146,16 +146,14 @@ func UpdateMarker(data *GPSdata) func(http.ResponseWriter, *http.Request) {
 				log.Printf("Lat: %+v, Long: %+v, Time: %+v", data.Latitude, data.Longitude, data.Timestamp)
 			}
 			r.Close = true
-			data.mutex.Unlock()
 		case "GET":
 			log.Println("Handling GET request from", r.RemoteAddr)
 			data.mutex.Lock()
 			dataBytes, err := json.Marshal(data)
 			data.mutex.Unlock()
 			if err != nil {
-				w.WriteHeader(http.StatusNotFound)
 				errstring := fmt.Sprintf("Error retrieving location: %v", err)
-				w.Write([]byte(errstring))
+				http.Error(w, errstring, http.StatusBadRequest)
 				return
 			}
 			w.WriteHeader(http.StatusOK)
