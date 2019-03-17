@@ -18,15 +18,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+	}
 	go gps.Readgps(port, gpschan)
 	for {
 		gpsOut := <-gpschan
 		if strings.Contains(gpsOut, "GPRMC") {
 			urlData := url.Values{}
 			urlData.Add("Output", gpsOut)
-			client := &http.Client{
-				Timeout: 3 * time.Second,
-			}
 			log.Printf("Read GPS output: %+v", gpsOut)
 			resp, err := client.PostForm(gps.ServerIP+"/marker", urlData)
 			if err != nil {
