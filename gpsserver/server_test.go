@@ -66,11 +66,11 @@ func TestUpdateMarkerPost(t *testing.T) {
 		{
 			"GPRMC,224537.000,A,5125.0399,N,00017.0901,W,0.29,103.93,030218,,,D*79",
 			"Location updated",
-			200,
+			http.StatusOK,
 		},
 		{
-			"NOTVALID", "Error parsing gps output: not an expected input [NOTVALID]",
-			400,
+			"NOTVALID", "Error parsing gps output: not an expected input [NOTVALID]\n",
+			http.StatusBadRequest,
 		},
 	}
 	for _, input := range testInput {
