@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // Port is the listening port for the server
@@ -38,7 +40,6 @@ type GPSdata struct {
 	Active    bool
 	Speed     float64
 	Bearing   float64
-	mutex     sync.Mutex
 }
 
 // Round implements a rounding feature not available in Go 1.9
@@ -95,7 +96,7 @@ func (data *GPSdata) ParseGPS(outputline string) error {
 	activeRegex := regexp.MustCompile("A,")
 	data.Active = activeRegex.MatchString(outputline)
 	if !data.Active {
-		return fmt.Errorf("No fix yet")
+		return errors.New("No fix yet")
 	}
 
 	coordRegex := regexp.MustCompile("(\\d+.\\d+).([NESW])")
@@ -138,51 +139,55 @@ func SendMap(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, webfile)
 }
 
-// UpdateMarker handles requests that read from or write to the current GPSdata
-// held in memory.
-func UpdateMarker(data *GPSdata) http.HandlerFunc {
+func NewLocationHandler(p *Publisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "POST":
-			log.Println("Handling POST request from", r.RemoteAddr)
-			data.mutex.Lock()
-			defer data.mutex.Unlock()
-			r.ParseForm()
-			u := r.FormValue("Output")
-			rawData, err := url.QueryUnescape(u)
-			if err != nil {
-				log.Println(err)
-			}
-			err = data.ParseGPS(rawData)
-			if err != nil {
-				errstring := fmt.Sprintf("Error parsing gps output: %v", err)
-				http.Error(w, errstring, http.StatusBadRequest)
-			} else {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("Location updated"))
-			}
-			if data.Active {
-				log.Printf("Lat: %+v, Long: %+v, Time: %+v", data.Latitude, data.Longitude, data.Timestamp)
-			}
-			r.Close = true
-		case "GET":
-			log.Println("Handling GET request from", r.RemoteAddr)
-			data.mutex.Lock()
-			dataBytes, err := json.Marshal(data)
-			data.mutex.Unlock()
-			if err != nil {
-				errstring := fmt.Sprintf("Error retrieving location: %v", err)
-				http.Error(w, errstring, http.StatusBadRequest)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			w.Write(dataBytes)
-			r.Close = true
-		default:
-			w.WriteHeader(http.StatusBadRequest)
-			errstring := fmt.Sprintf("%v method not supported", r.Method)
-			w.Write([]byte(errstring))
-			r.Close = true
+		ctx := r.Context()
+		r.ParseForm()
+		u := r.FormValue("Output")
+		rawData, err := url.QueryUnescape(u)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
 		}
+		data := &GPSdata{}
+		err = data.ParseGPS(rawData)
+		if err != nil {
+			log.Printf("Error parsing GPS data: %v", err)
+			errstring := fmt.Sprintf("Error parsing gps output: %v", err)
+			http.Error(w, errstring, http.StatusBadRequest)
+			return
+		}
+		log.Println("Writing to publisher")
+		p.Publish(ctx, data)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Location updated"))
+	}
+}
+
+var upgrader = websocket.Upgrader{}
+
+func NewSubscriberHandler(p *Publisher) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+		// Open websocket
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Printf("Error calling upgrader: %v", err)
+			status := http.StatusInternalServerError
+			http.Error(w, "Could not open websocket", status)
+			return
+		}
+		sw := NewSocketWriter(conn)
+		ctx := context.Background()
+		var wg sync.WaitGroup
+		go func() {
+			wg.Add(1)
+			defer wg.Done()
+			sw.Run(ctx)
+		}()
+		removeFunc := p.AddReceiver(ctx, sw)
+		defer removeFunc()
+		wg.Wait()
 	}
 }
