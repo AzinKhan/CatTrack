@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -15,10 +16,14 @@ import (
 func main() {
 	flag.Parse()
 	router := mux.NewRouter()
-	var latestData gpsserver.GPSdata
+
+	p := gpsserver.NewPublisher()
+	ctx := context.Background()
+	p.AddReceiver(ctx, &gpsserver.Logger{})
+	go p.Run(ctx)
 	router.HandleFunc("/map", gpsserver.SendMap)
-	// This receives the post requests
-	router.HandleFunc("/marker", gpsserver.UpdateMarker(&latestData))
+	router.HandleFunc("/marker", gpsserver.NewLocationHandler(p))
+	router.HandleFunc("/subscribe", gpsserver.NewSubscriberHandler(p))
 	address := fmt.Sprintf("0.0.0.0:%v", gpsserver.Port)
 	server := &http.Server{
 		Addr:         address,

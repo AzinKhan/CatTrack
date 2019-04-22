@@ -1,22 +1,25 @@
 package gpsserver
 
 import (
-	"encoding/json"
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 // Port is the listening port for the server
 var Port, webfile string
 
-const layout string = "020106150405.000"
+const layout string = "020106150405"
 
 const unit float64 = 0.0000005
 
@@ -37,7 +40,6 @@ type GPSdata struct {
 	Active    bool
 	Speed     float64
 	Bearing   float64
-	mutex     sync.Mutex
 }
 
 // Round implements a rounding feature not available in Go 1.9
@@ -77,36 +79,54 @@ func ParseCoord(coord, hemi string) (float64, error) {
 // the relevant values.
 func (data *GPSdata) ParseGPS(outputline string) error {
 	// The data come as one string delineated by commas
-	splitz := strings.Split(outputline, ",")
-	if len(splitz) != 13 {
-		return fmt.Errorf("not an expected input %v", splitz)
+	timeRegex := regexp.MustCompile("\\d\\d\\d\\d\\d\\d")
+	dateTime := timeRegex.FindAllString(outputline, -1)
+	if len(dateTime) != 2 {
+		return errors.New("Could not parse timestamp")
 	}
 	var err error
-	data.Timestamp, err = time.Parse(layout, (splitz[9] + splitz[1]))
+	data.Timestamp, err = time.Parse(layout, (dateTime[1] + dateTime[0]))
 	if err != nil {
 		return err
 	}
-	if splitz[2] == "A" {
-		data.Active = true
-	} else {
-		log.Println("No fix yet")
-		return fmt.Errorf("No fix yet")
+	// Replace matches with empty strings to prevent matching
+	// again on regexs below
+	outputline = timeRegex.ReplaceAllString(outputline, "")
+
+	activeRegex := regexp.MustCompile("A,")
+	data.Active = activeRegex.MatchString(outputline)
+	if !data.Active {
+		return errors.New("No fix yet")
 	}
-	data.Latitude, err = ParseCoord(splitz[3], splitz[4])
+
+	coordRegex := regexp.MustCompile("(\\d+.\\d+).([NESW])")
+	coords := coordRegex.FindAllStringSubmatch(outputline, -1)
+	if len(coords) != 2 || len(coords[0]) != 3 && len(coords[1]) != 3 {
+		return errors.New("Unexpected coordinate format")
+	}
+	data.Latitude, err = ParseCoord(coords[0][1], coords[0][2])
 	if err != nil {
 		return err
 	}
-	data.Longitude, err = ParseCoord(splitz[5], splitz[6])
+	data.Longitude, err = ParseCoord(coords[1][1], coords[1][2])
 	if err != nil {
 		return err
 	}
-	knotspeed, err := strconv.ParseFloat(splitz[7], 64)
+	outputline = coordRegex.ReplaceAllString(outputline, "")
+
+	velocityRegex := regexp.MustCompile("\\d+\\.\\d+")
+	velocity := velocityRegex.FindAllString(outputline, -1)
+	if len(velocity) != 2 {
+		return errors.New("could not parse velocity")
+	}
+
+	knotspeed, err := strconv.ParseFloat(velocity[0], 64)
 	if err != nil {
 		return err
 	}
 	// Convert to km/h
 	data.Speed = knotspeed * knotRatio
-	data.Bearing, err = strconv.ParseFloat(splitz[8], 64)
+	data.Bearing, err = strconv.ParseFloat(velocity[1], 64)
 	if err != nil {
 		return err
 	}
@@ -119,51 +139,55 @@ func SendMap(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, webfile)
 }
 
-// UpdateMarker handles requests that read from or write to the current GPSdata
-// held in memory.
-func UpdateMarker(data *GPSdata) http.HandlerFunc {
+func NewLocationHandler(p *Publisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "POST":
-			log.Println("Handling POST request from", r.RemoteAddr)
-			data.mutex.Lock()
-			defer data.mutex.Unlock()
-			r.ParseForm()
-			u := r.FormValue("Output")
-			rawData, err := url.QueryUnescape(u)
-			if err != nil {
-				log.Println(err)
-			}
-			err = data.ParseGPS(rawData)
-			if err != nil {
-				errstring := fmt.Sprintf("Error parsing gps output: %v", err)
-				http.Error(w, errstring, http.StatusBadRequest)
-			} else {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("Location updated"))
-			}
-			if data.Active {
-				log.Printf("Lat: %+v, Long: %+v, Time: %+v", data.Latitude, data.Longitude, data.Timestamp)
-			}
-			r.Close = true
-		case "GET":
-			log.Println("Handling GET request from", r.RemoteAddr)
-			data.mutex.Lock()
-			dataBytes, err := json.Marshal(data)
-			data.mutex.Unlock()
-			if err != nil {
-				errstring := fmt.Sprintf("Error retrieving location: %v", err)
-				http.Error(w, errstring, http.StatusBadRequest)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			w.Write(dataBytes)
-			r.Close = true
-		default:
-			w.WriteHeader(http.StatusBadRequest)
-			errstring := fmt.Sprintf("%v method not supported", r.Method)
-			w.Write([]byte(errstring))
-			r.Close = true
+		ctx := r.Context()
+		r.ParseForm()
+		u := r.FormValue("Output")
+		rawData, err := url.QueryUnescape(u)
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
 		}
+		data := &GPSdata{}
+		err = data.ParseGPS(rawData)
+		if err != nil {
+			log.Printf("Error parsing GPS data: %v", err)
+			errstring := fmt.Sprintf("Error parsing gps output: %v", err)
+			http.Error(w, errstring, http.StatusBadRequest)
+			return
+		}
+		log.Println("Writing to publisher")
+		p.Publish(ctx, data)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Location updated"))
+	}
+}
+
+var upgrader = websocket.Upgrader{}
+
+func NewSubscriberHandler(p *Publisher) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+		// Open websocket
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Printf("Error calling upgrader: %v", err)
+			status := http.StatusInternalServerError
+			http.Error(w, "Could not open websocket", status)
+			return
+		}
+		sw := NewSocketWriter(conn)
+		ctx := context.Background()
+		var wg sync.WaitGroup
+		go func() {
+			wg.Add(1)
+			defer wg.Done()
+			sw.Run(ctx)
+		}()
+		removeFunc := p.AddReceiver(ctx, sw)
+		defer removeFunc()
+		wg.Wait()
 	}
 }

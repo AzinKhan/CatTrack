@@ -20,36 +20,24 @@
       async function initMap() {
         var map = L.map('map').setView([51.417451, -0.09], 18);
         var marker = L.marker([51.417451, -0.09]).addTo(map);
-		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-			maxZoom: 19,
-			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-		}).addTo(map);
-        while (1 > 0) {
-          newpos = getLocation(map, marker);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        var ws = new WebSocket("ws://192.168.0.26:8000/subscribe");
+        ws.onopen = function() {
+          console.log("Opening websocket");
+        }
+        ws.onmessage = function(event) {
+          var data = JSON.parse(event.data);
+          newpos = new L.latLng(data.Latitude, data.Longitude);
           marker.setLatLng(newpos);
+          console.log(newpos);
           map.panTo(newpos);
-          await sleep(1000)
         }
       }
 
-      function getLocation(map, marker) {
-          var gpsInfo = httpGet("http://192.168.0.26:8000/marker");
-          var location = new L.latLng(gpsInfo.Latitude, gpsInfo.Longitude);
-          return location;
-      }
-
-      function httpGet(URL) {
-        var req = new XMLHttpRequest();
-        req.open("GET", URL, false);
-        req.send(null);
-        result = req.responseText;
-        req.abort();
-        return JSON.parse(result);
-      }
-
-      function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms))
-      }
     initMap();
     </script>
   </body>

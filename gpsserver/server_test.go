@@ -1,7 +1,7 @@
 package gpsserver
 
 import (
-	"encoding/json"
+	"context"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func MockServerFactory() (string, *http.ServeMux, func()) {
@@ -17,6 +19,7 @@ func MockServerFactory() (string, *http.ServeMux, func()) {
 	return srv.URL, mux, srv.Close
 }
 
+/*
 func TestUpdateMarkerGet(t *testing.T) {
 	serverURL, mux, tearDown := MockServerFactory()
 	defer tearDown()
@@ -51,88 +54,71 @@ func TestUpdateMarkerGet(t *testing.T) {
 		t.Fail()
 	}
 }
+*/
 
-func TestUpdateMarkerPost(t *testing.T) {
+type dataTester struct {
+	t        *testing.T
+	expected *GPSdata
+}
+
+func (dt *dataTester) Write(ctx context.Context, data *GPSdata) error {
+	assert.Equal(dt.t, dt.expected, data)
+	return nil
+}
+
+func TestLocationHandler(t *testing.T) {
 	serverURL, mux, tearDown := MockServerFactory()
 	defer tearDown()
-	var fakeGPSdata GPSdata
-	mux.HandleFunc("/marker", UpdateMarker(&fakeGPSdata))
+	ctx := context.Background()
+	publisher := NewRunningPublisher(ctx)
+	mux.HandleFunc("/marker", NewLocationHandler(publisher))
+	tempo, _ := time.Parse(layout, "030218224537.000")
 	testInput := []struct {
 		testLine       string
 		expectedText   string
 		expectedStatus int
-		//expectedTime   time.Time
+		expectedData   *GPSdata
 	}{
 		{
 			"GPRMC,224537.000,A,5125.0399,N,00017.0901,W,0.29,103.93,030218,,,D*79",
 			"Location updated",
 			http.StatusOK,
-		},
-		{
-			"NOTVALID", "Error parsing gps output: not an expected input [NOTVALID]\n",
-			http.StatusBadRequest,
-		},
-	}
-	for _, input := range testInput {
-		urlData := url.Values{}
-		urlData.Add("Output", input.testLine)
-		response, err := http.PostForm(serverURL+"/marker", urlData)
-		if err != nil {
-			t.Fail()
-		}
-		if response.StatusCode != input.expectedStatus {
-			t.Fail()
-		}
-		responsetext, _ := ioutil.ReadAll(response.Body)
-		if string(responsetext) != input.expectedText {
-			log.Printf("Got response text: %+v", string(responsetext))
-			log.Printf("Expected response text: %+v", input.expectedText)
-			t.Fail()
-		}
-		if input.expectedStatus == 200 {
-			tempo, _ := time.Parse(layout, "030218224537.000")
-			log.Println(tempo)
-			expected := GPSdata{
+			&GPSdata{
 				Latitude:  float64(51.417331),
 				Longitude: float64(-0.284835),
 				Timestamp: tempo,
 				Active:    true,
 				Speed:     float64(0.29 * 1.852001),
 				Bearing:   float64(103.93),
-			}
-			if fakeGPSdata != expected {
-				t.Fail()
-			}
-		}
+			},
+		},
+		{
+			"NOTVALID", "Error parsing gps output: Could not parse timestamp\n",
+			http.StatusBadRequest,
+			nil,
+		},
 	}
-}
+	for _, input := range testInput {
+		urlData := url.Values{}
+		urlData.Add("Output", input.testLine)
+		remove := publisher.AddReceiver(ctx, &dataTester{t, input.expectedData})
+		response, err := http.PostForm(serverURL+"/marker", urlData)
 
-func TestUpdateMarkerUnsupportedMethod(t *testing.T) {
-	serverURL, mux, tearDown := MockServerFactory()
-	defer tearDown()
-	var fakeGPSdata GPSdata
-	mux.HandleFunc("/marker", UpdateMarker(&fakeGPSdata))
-
-	response, err := http.Head(serverURL + "/marker")
-
-	if err != nil {
-		t.Fail()
+		assert.NoError(t, err)
+		assert.Equal(t, input.expectedStatus, response.StatusCode)
+		responsetext, err := ioutil.ReadAll(response.Body)
+		assert.NoError(t, err)
+		assert.Equal(t, input.expectedText, string(responsetext))
+		remove()
 	}
-	expectedStatus := 400
-	if response.StatusCode != expectedStatus {
-		log.Printf("Received status %+v", response.StatusCode)
-		log.Printf("Expected status code %+v", expectedStatus)
-		t.Fail()
-	}
-	log.Printf("%+v", response)
-
 }
 
 func TestParseGPS(t *testing.T) {
 	var fakeGPSdata GPSdata
 	testLine := "GPRMC,224537.000,A,5125.0399,N,00017.0901,W,0.29,103.93,030218,,,D*79"
-	fakeGPSdata.ParseGPS(testLine)
-	tempo, _ := time.Parse(layout, "030218224537.000")
+	err := fakeGPSdata.ParseGPS(testLine)
+	assert.NoError(t, err)
+	tempo, _ := time.Parse(layout, "030218224537")
 	expected := GPSdata{
 		Latitude:  float64(51.417331),
 		Longitude: float64(-0.284835),
@@ -141,9 +127,7 @@ func TestParseGPS(t *testing.T) {
 		Speed:     float64(0.29 * 1.852001),
 		Bearing:   float64(103.93),
 	}
-	if fakeGPSdata != expected {
-		t.Fail()
-	}
+	assert.Equal(t, expected, fakeGPSdata)
 }
 
 func TestParseCoord(t *testing.T) {
