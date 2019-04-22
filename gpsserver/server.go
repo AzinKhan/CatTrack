@@ -1,14 +1,15 @@
 package gpsserver
 
 import (
-	"encoding/json"
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -16,7 +17,7 @@ import (
 // Port is the listening port for the server
 var Port, webfile string
 
-const layout string = "020106150405.000"
+const layout string = "020106150405"
 
 const unit float64 = 0.0000005
 
@@ -77,36 +78,54 @@ func ParseCoord(coord, hemi string) (float64, error) {
 // the relevant values.
 func (data *GPSdata) ParseGPS(outputline string) error {
 	// The data come as one string delineated by commas
-	splitz := strings.Split(outputline, ",")
-	if len(splitz) != 13 {
-		return fmt.Errorf("not an expected input %v", splitz)
+	timeRegex := regexp.MustCompile("\\d\\d\\d\\d\\d\\d")
+	dateTime := timeRegex.FindAllString(outputline, -1)
+	if len(dateTime) != 2 {
+		return errors.New("Could not parse timestamp")
 	}
 	var err error
-	data.Timestamp, err = time.Parse(layout, (splitz[9] + splitz[1]))
+	data.Timestamp, err = time.Parse(layout, (dateTime[1] + dateTime[0]))
 	if err != nil {
 		return err
 	}
-	if splitz[2] == "A" {
-		data.Active = true
-	} else {
-		log.Println("No fix yet")
+	// Replace matches with empty strings to prevent matching
+	// again on regexs below
+	outputline = timeRegex.ReplaceAllString(outputline, "")
+
+	activeRegex := regexp.MustCompile("A,")
+	data.Active = activeRegex.MatchString(outputline)
+	if !data.Active {
 		return fmt.Errorf("No fix yet")
 	}
-	data.Latitude, err = ParseCoord(splitz[3], splitz[4])
+
+	coordRegex := regexp.MustCompile("(\\d+.\\d+).([NESW])")
+	coords := coordRegex.FindAllStringSubmatch(outputline, -1)
+	if len(coords) != 2 || len(coords[0]) != 3 && len(coords[1]) != 3 {
+		return errors.New("Unexpected coordinate format")
+	}
+	data.Latitude, err = ParseCoord(coords[0][1], coords[0][2])
 	if err != nil {
 		return err
 	}
-	data.Longitude, err = ParseCoord(splitz[5], splitz[6])
+	data.Longitude, err = ParseCoord(coords[1][1], coords[1][2])
 	if err != nil {
 		return err
 	}
-	knotspeed, err := strconv.ParseFloat(splitz[7], 64)
+	outputline = coordRegex.ReplaceAllString(outputline, "")
+
+	velocityRegex := regexp.MustCompile("\\d+\\.\\d+")
+	velocity := velocityRegex.FindAllString(outputline, -1)
+	if len(velocity) != 2 {
+		return errors.New("could not parse velocity")
+	}
+
+	knotspeed, err := strconv.ParseFloat(velocity[0], 64)
 	if err != nil {
 		return err
 	}
 	// Convert to km/h
 	data.Speed = knotspeed * knotRatio
-	data.Bearing, err = strconv.ParseFloat(splitz[8], 64)
+	data.Bearing, err = strconv.ParseFloat(velocity[1], 64)
 	if err != nil {
 		return err
 	}
