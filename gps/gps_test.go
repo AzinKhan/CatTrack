@@ -45,7 +45,7 @@ func TestReadLine(t *testing.T) {
 	}
 	for _, input := range testInput {
 		port := NewMockSerialPort(input.expectedString, input.expectedError)
-		result, err := Readline(port)
+		result, err := readline(port)
 		if result != input.expectedString {
 			log.Printf("Expected %+v", input.expectedString)
 			log.Printf("Got: %+v", result)
@@ -69,23 +69,12 @@ func TestReadgps(t *testing.T) {
 	}
 	for _, input := range testInput {
 		port := NewMockSerialPort(input.expectedString, input.expectedError)
-		go Readgps(port, messageChan)
+		go readGPS(port, messageChan)
 		result := <-messageChan
 		if result != input.expectedString {
 			log.Printf("Expected %+v", input.expectedString)
 			log.Printf("Got: %+v", result)
 			t.Fail()
 		}
-	}
-}
-
-func TestInitializePortReturnsError(t *testing.T) {
-	fakePortName := "/fakedev/fakePort"
-	port, err := InitializePort(fakePortName)
-	if err == nil {
-		t.Fail()
-	}
-	if port != nil {
-		t.Fail()
 	}
 }
