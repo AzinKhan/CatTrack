@@ -3,7 +3,6 @@ package gpsserver
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,20 +15,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Port is the listening port for the server
-var Port, webfile string
-
 const layout string = "020106150405"
 
 const unit float64 = 0.0000005
 
 // GPS gives speed in knots so convert to km/h
 const knotRatio float64 = 1.852001
-
-func init() {
-	flag.StringVar(&Port, "p", "8000", "Port for HTTP server")
-	flag.StringVar(&webfile, "f", "", "HTML file to serve")
-}
 
 // GPSdata is a container for all of the information contained in the
 // output from gps
@@ -133,10 +124,12 @@ func (data *GPSdata) ParseGPS(outputline string) error {
 	return nil
 }
 
-// SendMap is a handler for the website. It serves the webpage.
-func SendMap(w http.ResponseWriter, r *http.Request) {
-	log.Println("Serving website to", r.RemoteAddr)
-	http.ServeFile(w, r, webfile)
+// NewMapHandler returns a handler for the website. It serves the webpage.
+func NewMapHandler(webfile string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Serving website to", r.RemoteAddr)
+		http.ServeFile(w, r, webfile)
+	}
 }
 
 func NewLocationHandler(p *Publisher) http.HandlerFunc {
