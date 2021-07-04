@@ -28,7 +28,7 @@ func (m *MockSerialPort) Read(buf []byte) (int, error) {
 	return len(buf), m.ReturnError
 }
 
-func MockSerialPortFactory(returnString string, returnError error) *MockSerialPort {
+func NewMockSerialPort(returnString string, returnError error) *MockSerialPort {
 	return &MockSerialPort{
 		ReturnString: fmt.Sprintf("$%+v\n", returnString),
 		ReturnError:  returnError,
@@ -44,7 +44,7 @@ func TestReadLine(t *testing.T) {
 		{"", errors.New("TestError")},
 	}
 	for _, input := range testInput {
-		port := MockSerialPortFactory(input.expectedString, input.expectedError)
+		port := NewMockSerialPort(input.expectedString, input.expectedError)
 		result, err := Readline(port)
 		if result != input.expectedString {
 			log.Printf("Expected %+v", input.expectedString)
@@ -68,7 +68,7 @@ func TestReadgps(t *testing.T) {
 		{"AWholeBunchOfStuff", nil},
 	}
 	for _, input := range testInput {
-		port := MockSerialPortFactory(input.expectedString, input.expectedError)
+		port := NewMockSerialPort(input.expectedString, input.expectedError)
 		go Readgps(port, messageChan)
 		result := <-messageChan
 		if result != input.expectedString {
