@@ -12,15 +12,19 @@ import (
 )
 
 func main() {
+	var UARTPort, addr string
+	flag.StringVar(&UARTPort, "port", "/dev/ttyS0", "Serial port for connection")
+	flag.StringVar(&addr, "s", "http://localhost:8000", "Address of remote server")
 	flag.Parse()
 	gpschan := make(chan string)
-	port, err := gps.InitializePort(gps.UARTPort)
+	port, err := gps.InitializePort(UARTPort)
 	if err != nil {
 		log.Fatal(err)
 	}
 	client := &http.Client{
 		Timeout: 3 * time.Second,
 	}
+
 	go gps.Readgps(port, gpschan)
 	for {
 		gpsOut := <-gpschan
@@ -28,7 +32,7 @@ func main() {
 			urlData := url.Values{}
 			urlData.Add("Output", gpsOut)
 			log.Printf("Read GPS output: %+v", gpsOut)
-			resp, err := client.PostForm(gps.ServerIP+"/marker", urlData)
+			resp, err := client.PostForm(addr+"/marker", urlData)
 			if err != nil {
 				log.Println(err)
 				// Continue if there is an error

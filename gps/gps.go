@@ -1,19 +1,11 @@
 package gps
 
 import (
-	"flag"
 	"io"
 	"log"
 
 	"github.com/tarm/serial"
 )
-
-var UARTPort, ServerIP string
-
-func init() {
-	flag.StringVar(&UARTPort, "port", "/dev/ttyS0", "Serial port for connection")
-	flag.StringVar(&ServerIP, "s", "http://localhost:8000", "Address of remote server")
-}
 
 // Readline takes a serial port and waits for a starting character, $
 // at which point it will read from the port until a newline or
