@@ -19,43 +19,6 @@ func MockServerFactory() (string, *http.ServeMux, func()) {
 	return srv.URL, mux, srv.Close
 }
 
-/*
-func TestUpdateMarkerGet(t *testing.T) {
-	serverURL, mux, tearDown := MockServerFactory()
-	defer tearDown()
-	tempo, _ := time.Parse(layout, "030218224537.000")
-	fakeGPSdata := GPSdata{
-		Latitude:  float64(51.417331),
-		Longitude: float64(-0.284835),
-		Timestamp: tempo,
-		Active:    true,
-		Speed:     float64(0.29 * 1.852001),
-		Bearing:   float64(103.93),
-	}
-	mux.HandleFunc("/marker", UpdateMarker(&fakeGPSdata))
-	response, err := http.Get(serverURL + "/marker")
-	if err != nil {
-		t.Fail()
-	}
-	if response.StatusCode != 200 {
-		t.Fail()
-	}
-	resp, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		t.Fail()
-	}
-	var resultData GPSdata
-	err = json.Unmarshal(resp, &resultData)
-	if err != nil {
-		log.Println(err)
-		t.Fail()
-	}
-	if resultData != fakeGPSdata {
-		t.Fail()
-	}
-}
-*/
-
 type dataTester struct {
 	t        *testing.T
 	expected *GPSdata
