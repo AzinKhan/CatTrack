@@ -1,6 +1,7 @@
 package gps
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -69,7 +70,7 @@ func TestReadgps(t *testing.T) {
 	}
 	for _, input := range testInput {
 		port := NewMockSerialPort(input.expectedString, input.expectedError)
-		go readGPS(port, messageChan)
+		go readGPS(context.Background(), port, messageChan)
 		result := <-messageChan
 		if result != input.expectedString {
 			log.Printf("Expected %+v", input.expectedString)

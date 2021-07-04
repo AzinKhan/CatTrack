@@ -1,6 +1,7 @@
 package gps
 
 import (
+	"context"
 	"io"
 	"log"
 )
@@ -19,22 +20,28 @@ func NewReader(r io.Reader) *Reader {
 	return &Reader{r}
 }
 
-func (r *Reader) ReadGPS() chan string {
+func (r *Reader) ReadGPS(ctx context.Context) chan string {
 	ch := make(chan string)
-	go readGPS(r, ch)
+	go readGPS(ctx, r, ch)
 	return ch
 }
 
 // readGPS reads from a given io.Reader and calls Readline.
 // The message is then written to a given channel.
-func readGPS(r io.Reader, ch chan string) {
+func readGPS(ctx context.Context, r io.Reader, ch chan string) {
 	for {
-		message, err := readline(r)
-		if err != nil {
-			log.Printf("Error reading line: %+v", err)
-			continue
+		select {
+		case <-ctx.Done():
+			close(ch)
+			return
+		default:
+			message, err := readline(r)
+			if err != nil {
+				log.Printf("Error reading line: %+v", err)
+				continue
+			}
+			ch <- message
 		}
-		ch <- message
 	}
 }
 

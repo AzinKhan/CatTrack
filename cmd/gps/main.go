@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/AzinKhan/CatTrack/gps"
@@ -17,6 +21,7 @@ func main() {
 	flag.StringVar(&UARTPort, "port", "/dev/ttyS0", "Serial port for connection")
 	flag.StringVar(&addr, "s", "http://localhost:8000", "Address of remote server")
 	flag.Parse()
+
 	config := &serial.Config{
 		Name: UARTPort,
 		Baud: 9600,
@@ -26,27 +31,33 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer port.Close()
 	client := &http.Client{
 		Timeout: 3 * time.Second,
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		s := <-ch
+		log.Printf("Signal %s received, exiting...\n", s)
+		cancel()
+	}()
+
 	reader := gps.NewReader(port)
 
-	messages := reader.ReadGPS()
-
-	for gpsOut := range messages {
-		if !strings.Contains(gpsOut, "GPRMC") {
+	for message := range reader.ReadGPS(ctx) {
+		if !strings.Contains(message, "GPRMC") {
 			continue
 		}
+		log.Printf("Read GPS output: %s", message)
+
 		urlData := url.Values{}
-		urlData.Add("Output", gpsOut)
-		log.Printf("Read GPS output: %+v", gpsOut)
+		urlData.Add("Output", message)
 		resp, err := client.PostForm(addr+"/marker", urlData)
 		if err != nil {
 			log.Println(err)
-			// Continue if there is an error
-			// This avoids null pointer panics when trying to close the response body below
-			// TODO: Add checks to see if the resp exists before continuing
 			continue
 		}
 		resp.Body.Close()
