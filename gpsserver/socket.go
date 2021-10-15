@@ -10,7 +10,7 @@ import (
 
 type SocketWriter struct {
 	conn *websocket.Conn
-	ch   chan *GPSdata
+	ch   chan *GPSReading
 }
 
 // NewSocketWriter returns a SocketWriter that will write
@@ -19,11 +19,11 @@ type SocketWriter struct {
 func NewSocketWriter(conn *websocket.Conn) *SocketWriter {
 	return &SocketWriter{
 		conn: conn,
-		ch:   make(chan *GPSdata, 100),
+		ch:   make(chan *GPSReading, 100),
 	}
 }
 
-func (s *SocketWriter) Write(ctx context.Context, data *GPSdata) error {
+func (s *SocketWriter) Write(ctx context.Context, data *GPSReading) error {
 	s.ch <- data
 	return nil
 }

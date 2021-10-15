@@ -15,9 +15,9 @@ const unit float64 = 0.0000005
 // GPS gives speed in knots so convert to km/h
 const knotRatio float64 = 1.852001
 
-// GPSdata is a container for all of the information contained in the
+// GPSReading is a container for all of the information contained in the
 // output from gps
-type GPSdata struct {
+type GPSReading struct {
 	Latitude  float64
 	Longitude float64
 	Timestamp time.Time
@@ -59,9 +59,9 @@ func ParseCoord(coord, hemi string) (float64, error) {
 	return coordinate, nil
 }
 
-// ParseGPS takes the output from gps and populates a GPSdata struct with
+// ParseGPS takes the output from gps and populates a GPSReading struct with
 // the relevant values.
-func ParseGPS(outputline string) (*GPSdata, error) {
+func ParseGPS(outputline string) (*GPSReading, error) {
 	// The data come as one string delineated by commas
 	timeRegex := regexp.MustCompile("\\d\\d\\d\\d\\d\\d")
 	dateTime := timeRegex.FindAllString(outputline, -1)
@@ -114,7 +114,7 @@ func ParseGPS(outputline string) (*GPSdata, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &GPSdata{
+	return &GPSReading{
 		Timestamp: timestamp,
 		Latitude:  latitude,
 		Longitude: longitude,

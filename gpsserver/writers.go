@@ -9,7 +9,7 @@ import (
 // interface which simply logs the data received.
 type Logger struct{}
 
-func (l *Logger) Write(ctx context.Context, data *GPSdata) error {
+func (l *Logger) Write(ctx context.Context, data *GPSReading) error {
 	log.Printf("Received data %+v", data)
 	return nil
 }

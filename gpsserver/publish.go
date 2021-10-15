@@ -17,19 +17,19 @@ const (
 // receive the GPS data. Implementations may write the data,
 // for example, to a database, a websocket, or stdout.
 type DataWriter interface {
-	Write(context.Context, *GPSdata) error
+	Write(context.Context, *GPSReading) error
 }
 
 type Publisher struct {
-	ch        chan *GPSdata
-	receivers map[string]chan *GPSdata
+	ch        chan *GPSReading
+	receivers map[string]chan *GPSReading
 	mu        *sync.Mutex
 }
 
 func NewPublisher() *Publisher {
 	return &Publisher{
-		ch:        make(chan *GPSdata, publisherBuffer),
-		receivers: make(map[string]chan *GPSdata),
+		ch:        make(chan *GPSReading, publisherBuffer),
+		receivers: make(map[string]chan *GPSReading),
 		mu:        new(sync.Mutex),
 	}
 }
@@ -65,7 +65,7 @@ func (p *Publisher) Run(ctx context.Context) {
 func (p *Publisher) AddReceiver(ctx context.Context, dw DataWriter) (remove func()) {
 	log.Printf("Adding receiver %+v", dw)
 	childCtx, cancel := context.WithCancel(ctx)
-	receiveCh := make(chan *GPSdata, receiverBuffer)
+	receiveCh := make(chan *GPSReading, receiverBuffer)
 
 	rcvr := &receiver{receiveCh, dw}
 	id := uuid.New().String()
@@ -86,7 +86,7 @@ func (p *Publisher) AddReceiver(ctx context.Context, dw DataWriter) (remove func
 
 // Publish sends the given data point to the connected subscribers.
 // TODO: Data should not be a pointer
-func (p *Publisher) Publish(ctx context.Context, data *GPSdata) {
+func (p *Publisher) Publish(ctx context.Context, data *GPSReading) {
 	if len(p.receivers) == 0 {
 		log.Println("No receivers, skipping publish")
 		return
@@ -95,7 +95,7 @@ func (p *Publisher) Publish(ctx context.Context, data *GPSdata) {
 }
 
 type receiver struct {
-	ch <-chan *GPSdata
+	ch <-chan *GPSReading
 	dw DataWriter
 }
 
