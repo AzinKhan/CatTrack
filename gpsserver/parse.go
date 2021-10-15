@@ -61,58 +61,65 @@ func ParseCoord(coord, hemi string) (float64, error) {
 
 // ParseGPS takes the output from gps and populates a GPSdata struct with
 // the relevant values.
-func (data *GPSdata) ParseGPS(outputline string) error {
+func ParseGPS(outputline string) (*GPSdata, error) {
 	// The data come as one string delineated by commas
 	timeRegex := regexp.MustCompile("\\d\\d\\d\\d\\d\\d")
 	dateTime := timeRegex.FindAllString(outputline, -1)
 	if len(dateTime) != 2 {
-		return errors.New("Could not parse timestamp")
+		return nil, errors.New("Could not parse timestamp")
 	}
 	var err error
-	data.Timestamp, err = time.Parse(layout, (dateTime[1] + dateTime[0]))
+	timestamp, err := time.Parse(layout, (dateTime[1] + dateTime[0]))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Replace matches with empty strings to prevent matching
 	// again on regexs below
 	outputline = timeRegex.ReplaceAllString(outputline, "")
 
 	activeRegex := regexp.MustCompile("A,")
-	data.Active = activeRegex.MatchString(outputline)
-	if !data.Active {
-		return errors.New("No fix yet")
+	active := activeRegex.MatchString(outputline)
+	if !active {
+		return nil, errors.New("No fix yet")
 	}
 
 	coordRegex := regexp.MustCompile("(\\d+.\\d+).([NESW])")
 	coords := coordRegex.FindAllStringSubmatch(outputline, -1)
 	if len(coords) != 2 || len(coords[0]) != 3 && len(coords[1]) != 3 {
-		return errors.New("Unexpected coordinate format")
+		return nil, errors.New("Unexpected coordinate format")
 	}
-	data.Latitude, err = ParseCoord(coords[0][1], coords[0][2])
+	latitude, err := ParseCoord(coords[0][1], coords[0][2])
 	if err != nil {
-		return err
+		return nil, err
 	}
-	data.Longitude, err = ParseCoord(coords[1][1], coords[1][2])
+	longitude, err := ParseCoord(coords[1][1], coords[1][2])
 	if err != nil {
-		return err
+		return nil, err
 	}
 	outputline = coordRegex.ReplaceAllString(outputline, "")
 
 	velocityRegex := regexp.MustCompile("\\d+\\.\\d+")
 	velocity := velocityRegex.FindAllString(outputline, -1)
 	if len(velocity) != 2 {
-		return errors.New("could not parse velocity")
+		return nil, errors.New("could not parse velocity")
 	}
 
 	knotspeed, err := strconv.ParseFloat(velocity[0], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Convert to km/h
-	data.Speed = knotspeed * knotRatio
-	data.Bearing, err = strconv.ParseFloat(velocity[1], 64)
+	speed := knotspeed * knotRatio
+	bearing, err := strconv.ParseFloat(velocity[1], 64)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &GPSdata{
+		Timestamp: timestamp,
+		Latitude:  latitude,
+		Longitude: longitude,
+		Speed:     speed,
+		Bearing:   bearing,
+		Active:    active,
+	}, nil
 }

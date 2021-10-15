@@ -9,12 +9,11 @@ import (
 )
 
 func TestParseGPS(t *testing.T) {
-	var fakeGPSdata GPSdata
 	testLine := "GPRMC,224537.000,A,5125.0399,N,00017.0901,W,0.29,103.93,030218,,,D*79"
-	err := fakeGPSdata.ParseGPS(testLine)
+	data, err := ParseGPS(testLine)
 	assert.NoError(t, err)
 	tempo, _ := time.Parse(layout, "030218224537")
-	expected := GPSdata{
+	expected := &GPSdata{
 		Latitude:  float64(51.417331),
 		Longitude: float64(-0.284835),
 		Timestamp: tempo,
@@ -22,7 +21,7 @@ func TestParseGPS(t *testing.T) {
 		Speed:     float64(0.29 * 1.852001),
 		Bearing:   float64(103.93),
 	}
-	assert.Equal(t, expected, fakeGPSdata)
+	assert.Equal(t, expected, data)
 }
 
 func TestParseCoord(t *testing.T) {
@@ -42,8 +41,7 @@ func TestParseCoord(t *testing.T) {
 
 func TestParseGPSReturnsError(t *testing.T) {
 	input := "Some wrong input"
-	var fakeGPSdata GPSdata
-	err := fakeGPSdata.ParseGPS(input)
+	_, err := ParseGPS(input)
 	if err == nil {
 		t.Fail()
 	}

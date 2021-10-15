@@ -32,8 +32,7 @@ func NewLocationHandler(p *Publisher) http.HandlerFunc {
 			http.Error(w, "Bad request", http.StatusBadRequest)
 			return
 		}
-		data := &GPSdata{}
-		err = data.ParseGPS(rawData)
+		data, err := ParseGPS(rawData)
 		if err != nil {
 			log.Printf("Error parsing GPS data: %v", err)
 			errstring := fmt.Sprintf("Error parsing gps output: %v", err)
