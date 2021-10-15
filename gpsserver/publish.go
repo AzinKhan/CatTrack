@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -11,6 +12,7 @@ import (
 const (
 	receiverBuffer  = 10
 	publisherBuffer = 100
+	receiveTimeout  = 5 * time.Second
 )
 
 // DataWriter is an interface for different clients that may
@@ -47,9 +49,20 @@ func (p *Publisher) Run(ctx context.Context) {
 		case data := <-p.ch:
 			p.mu.Lock()
 			log.Printf("Sending data to %d receivers", len(p.receivers))
-			for _, receiver := range p.receivers {
-				receiver <- data
+			var wg sync.WaitGroup
+			wg.Add(len(p.receivers))
+			for id, receiver := range p.receivers {
+				rcvr := receiver
+				rcvrID := id
+				// Send data in a goroutine with a timeout to ensure that
+				// one blocking receiver (due to full channel) does not
+				// block the rest.
+				go func() {
+					defer wg.Done()
+					sendWithTimeout(rcvrID, data, rcvr)
+				}()
 			}
+			wg.Wait()
 			p.mu.Unlock()
 
 		case <-ctx.Done():
@@ -57,6 +70,24 @@ func (p *Publisher) Run(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func sendWithTimeout(id string, data *GPSReading, receiver chan (*GPSReading)) {
+	done := make(chan struct{})
+	timer := time.NewTimer(receiveTimeout)
+	// TODO: If this times out then the goroutine will leak
+	go func() {
+		receiver <- data
+		timer.Stop()
+		done <- struct{}{}
+	}()
+
+	select {
+	case <-timer.C:
+		log.Printf("Receiver %s timed out", id)
+	case <-done:
+	}
+
 }
 
 // AddReceiver adds a receiver to the Publisher's subscribers and returns a function
