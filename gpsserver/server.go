@@ -132,6 +132,8 @@ func NewMapHandler(webfile string) http.HandlerFunc {
 	}
 }
 
+// NewLocationHandler returns an HTTP handler func for receiving new
+// GPS data.
 func NewLocationHandler(p *Publisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -160,6 +162,8 @@ func NewLocationHandler(p *Publisher) http.HandlerFunc {
 
 var upgrader = websocket.Upgrader{}
 
+// NewSubscriberHandler returns an HTTP handler func for registering a new
+// websocket subscriber to listen for new GPS data.
 func NewSubscriberHandler(p *Publisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
