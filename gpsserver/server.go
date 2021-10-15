@@ -178,8 +178,8 @@ func NewSubscriberHandler(p *Publisher) http.HandlerFunc {
 		sw := NewSocketWriter(conn)
 		ctx := context.Background()
 		var wg sync.WaitGroup
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			defer wg.Done()
 			sw.Run(ctx)
 		}()
