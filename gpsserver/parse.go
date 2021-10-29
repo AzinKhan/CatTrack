@@ -121,9 +121,7 @@ func parseCoord(coord, hemi string) (float64, error) {
 	}
 	// Change sign of co-ordinate if either in West or South hemisphere
 	switch hemi {
-	case "W":
-		coordinate = -1.0 * coordinate
-	case "S":
+	case "S", "W":
 		coordinate = -1.0 * coordinate
 	}
 	return coordinate, nil
