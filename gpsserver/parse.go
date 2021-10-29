@@ -35,7 +35,7 @@ func ParseGPS(outputline string) (GPSReading, error) {
 	timeRegex := regexp.MustCompile("\\d\\d\\d\\d\\d\\d")
 	dateTime := timeRegex.FindAllString(outputline, -1)
 	if len(dateTime) != 2 {
-		return GPSReading{}, errors.New("Could not parse timestamp")
+		return GPSReading{}, errors.New("could not parse timestamp")
 	}
 	timestamp, err := time.Parse(layout, (dateTime[1] + dateTime[0]))
 	if err != nil {
@@ -49,14 +49,14 @@ func ParseGPS(outputline string) (GPSReading, error) {
 	activeRegex := regexp.MustCompile("A,")
 	active := activeRegex.MatchString(outputline)
 	if !active {
-		return GPSReading{}, errors.New("No fix yet")
+		return GPSReading{}, errors.New("no fix yet")
 	}
 
 	// ----------COORDINATES-----------
 	coordRegex := regexp.MustCompile("(\\d+.\\d+).([NESW])")
 	coords := coordRegex.FindAllStringSubmatch(outputline, -1)
 	if len(coords) != 2 || len(coords[0]) != 3 && len(coords[1]) != 3 {
-		return GPSReading{}, errors.New("Unexpected coordinate format")
+		return GPSReading{}, errors.New("unexpected coordinate format")
 	}
 	latitude, err := parseCoord(coords[0][1], coords[0][2])
 	if err != nil {

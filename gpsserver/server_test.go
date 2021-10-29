@@ -55,7 +55,8 @@ func TestLocationHandler(t *testing.T) {
 			},
 		},
 		{
-			"NOTVALID", "Error parsing gps output: Could not parse timestamp\n",
+			// TODO: Don't check error strings
+			"NOTVALID", "Error parsing gps output: could not parse timestamp\n",
 			http.StatusBadRequest,
 			GPSReading{},
 		},
