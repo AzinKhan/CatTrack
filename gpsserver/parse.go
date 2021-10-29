@@ -26,39 +26,6 @@ type GPSReading struct {
 	Bearing   float64
 }
 
-// Round implements a rounding feature not available in Go 1.9
-func Round(x, unit float64) float64 {
-	return float64(int64(x/unit+0.5)) * unit
-}
-
-// ParseCoord converts the co-ordinates from the gps module to those
-// understandable by GoogleMaps. GPS gives DDMM.MMMM format output
-func ParseCoord(coord, hemi string) (float64, error) {
-	minuteString := coord[2:]
-	degreeString := coord[:2]
-	minutes, err := strconv.ParseFloat(minuteString, 64)
-	if err != nil {
-		return 0, err
-	}
-	degrees, err := strconv.ParseFloat(degreeString, 64)
-	// Convert to decimal
-	coordinate := degrees + Round((minutes/60.0), unit)
-	coordinate = Round(coordinate, unit)
-	coordinateString := fmt.Sprintf("%.6f", coordinate)
-	coordinate, err = strconv.ParseFloat(coordinateString, 64)
-	if err != nil {
-		return 0, err
-	}
-	// Change sign of co-ordinate if either in West or South hemisphere
-	switch hemi {
-	case "W":
-		coordinate = -1.0 * coordinate
-	case "S":
-		coordinate = -1.0 * coordinate
-	}
-	return coordinate, nil
-}
-
 // ParseGPS takes the output from gps and populates a GPSReading struct with
 // the relevant values.
 func ParseGPS(outputline string) (GPSReading, error) {
@@ -91,11 +58,11 @@ func ParseGPS(outputline string) (GPSReading, error) {
 	if len(coords) != 2 || len(coords[0]) != 3 && len(coords[1]) != 3 {
 		return GPSReading{}, errors.New("Unexpected coordinate format")
 	}
-	latitude, err := ParseCoord(coords[0][1], coords[0][2])
+	latitude, err := parseCoord(coords[0][1], coords[0][2])
 	if err != nil {
 		return GPSReading{}, err
 	}
-	longitude, err := ParseCoord(coords[1][1], coords[1][2])
+	longitude, err := parseCoord(coords[1][1], coords[1][2])
 	if err != nil {
 		return GPSReading{}, err
 	}
@@ -127,4 +94,37 @@ func ParseGPS(outputline string) (GPSReading, error) {
 		Bearing:   bearing,
 		Active:    active,
 	}, nil
+}
+
+// round implements a rounding feature not available in Go 1.9
+func round(x, unit float64) float64 {
+	return float64(int64(x/unit+0.5)) * unit
+}
+
+// parseCoord converts the co-ordinates from the gps module to those
+// understandable by GoogleMaps. GPS gives DDMM.MMMM format output
+func parseCoord(coord, hemi string) (float64, error) {
+	minuteString := coord[2:]
+	degreeString := coord[:2]
+	minutes, err := strconv.ParseFloat(minuteString, 64)
+	if err != nil {
+		return 0, err
+	}
+	degrees, err := strconv.ParseFloat(degreeString, 64)
+	// Convert to decimal
+	coordinate := degrees + round((minutes/60.0), unit)
+	coordinate = round(coordinate, unit)
+	coordinateString := fmt.Sprintf("%.6f", coordinate)
+	coordinate, err = strconv.ParseFloat(coordinateString, 64)
+	if err != nil {
+		return 0, err
+	}
+	// Change sign of co-ordinate if either in West or South hemisphere
+	switch hemi {
+	case "W":
+		coordinate = -1.0 * coordinate
+	case "S":
+		coordinate = -1.0 * coordinate
+	}
+	return coordinate, nil
 }

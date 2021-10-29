@@ -28,7 +28,7 @@ func TestParseCoord(t *testing.T) {
 	coord := "5125.0399"
 	hemi := "S"
 	expected := float64(-51.417331)
-	result, err := ParseCoord(coord, hemi)
+	result, err := parseCoord(coord, hemi)
 	if err != nil {
 		t.Fail()
 	}
@@ -49,7 +49,7 @@ func TestParseGPSReturnsError(t *testing.T) {
 
 func TestParseCoordReturnsError(t *testing.T) {
 	wrongCoordInput := "Not a number"
-	zero, err := ParseCoord(wrongCoordInput, "E")
+	zero, err := parseCoord(wrongCoordInput, "E")
 	if zero != 0 {
 		t.Fail()
 	}
