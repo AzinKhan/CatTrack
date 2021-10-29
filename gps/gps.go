@@ -26,8 +26,8 @@ func (r *Reader) ReadGPS(ctx context.Context) chan string {
 	return ch
 }
 
-// readGPS reads from a given io.Reader and calls Readline.
-// The message is then written to a given channel.
+// readGPS reads from a given io.Reader and calls Readline. The message is then
+// written to a given channel.
 func readGPS(ctx context.Context, r io.Reader, ch chan string) {
 	for {
 		select {
@@ -45,9 +45,9 @@ func readGPS(ctx context.Context, r io.Reader, ch chan string) {
 	}
 }
 
-// readline reads from r and waits for a starting character, $
-// at which point it will read from the port until a newline or
-// return character is reached. It returns a string of the read line.
+// readline reads from r and waits for a starting character, $ at which point
+// it will read from the port until a newline or return character is reached.
+// It returns a string of the read line.
 func readline(r io.Reader) (string, error) {
 	line := make([]byte, 0, 255)
 	buf := make([]byte, 1)

@@ -19,8 +19,7 @@ func NewMapHandler(webfile string) http.HandlerFunc {
 	}
 }
 
-// NewLocationHandler returns an HTTP handler func for receiving new
-// GPS data.
+// NewLocationHandler returns an HTTP handler func for receiving new GPS data.
 func NewLocationHandler(p *Publisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

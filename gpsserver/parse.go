@@ -15,8 +15,8 @@ const (
 	unit      float64 = 0.0000005
 )
 
-// GPSReading is a container for all of the information contained in the
-// output from gps
+// GPSReading is a container for all of the information contained in the output
+// from gps
 type GPSReading struct {
 	Latitude  float64
 	Longitude float64
@@ -41,8 +41,8 @@ func ParseGPS(outputline string) (GPSReading, error) {
 	if err != nil {
 		return GPSReading{}, err
 	}
-	// Replace matches with empty strings to prevent matching
-	// again on regexs below
+	// Replace matches with empty strings to prevent matching again on regexs
+	// below
 	outputline = timeRegex.ReplaceAllString(outputline, "")
 
 	// ----------ACTIVE----------------

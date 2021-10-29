@@ -13,9 +13,8 @@ type SocketWriter struct {
 	ch   chan GPSReading
 }
 
-// NewSocketWriter returns a SocketWriter that will write
-// any GPSData received via its Write method to the given
-// websocket connection.
+// NewSocketWriter returns a SocketWriter that will write any GPSData received
+// via its Write method to the given websocket connection.
 func NewSocketWriter(conn *websocket.Conn) *SocketWriter {
 	return &SocketWriter{
 		conn: conn,

@@ -5,8 +5,8 @@ import (
 	"log"
 )
 
-// Logger is an implementation of the DataWriter
-// interface which simply logs the data received.
+// Logger is an implementation of the DataWriter interface which simply logs
+// the data received.
 type Logger struct{}
 
 func (l *Logger) Write(ctx context.Context, data GPSReading) error {

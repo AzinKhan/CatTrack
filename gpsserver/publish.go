@@ -15,9 +15,9 @@ const (
 	receiveTimeout  = 5 * time.Second
 )
 
-// DataWriter is an interface for different clients that may
-// receive the GPS data. Implementations may write the data,
-// for example, to a database, a websocket, or stdout.
+// DataWriter is an interface for different clients that may receive the GPS
+// data. Implementations may write the data, for example, to a database, a
+// websocket, or stdout.
 type DataWriter interface {
 	Write(context.Context, GPSReading) error
 }
@@ -54,9 +54,9 @@ func (p *Publisher) Run(ctx context.Context) {
 			for id, receiver := range p.receivers {
 				rcvr := receiver
 				rcvrID := id
-				// Send data in a goroutine with a timeout to ensure that
-				// one blocking receiver (due to full channel) does not
-				// block the rest.
+				// Send data in a goroutine with a timeout to ensure that one
+				// blocking receiver (due to full channel) does not block the
+				// rest.
 				go func() {
 					defer wg.Done()
 					sendWithTimeout(rcvrID, data, rcvr)
