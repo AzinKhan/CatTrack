@@ -20,10 +20,10 @@ func MockServerFactory() (string, *http.ServeMux, func()) {
 
 type dataTester struct {
 	t        *testing.T
-	expected *GPSReading
+	expected GPSReading
 }
 
-func (dt *dataTester) Write(ctx context.Context, data *GPSReading) error {
+func (dt *dataTester) Write(ctx context.Context, data GPSReading) error {
 	assert.Equal(dt.t, dt.expected, data)
 	return nil
 }
@@ -39,13 +39,13 @@ func TestLocationHandler(t *testing.T) {
 		testLine       string
 		expectedText   string
 		expectedStatus int
-		expectedData   *GPSReading
+		expectedData   GPSReading
 	}{
 		{
 			"GPRMC,224537.000,A,5125.0399,N,00017.0901,W,0.29,103.93,030218,,,D*79",
 			"Location updated",
 			http.StatusOK,
-			&GPSReading{
+			GPSReading{
 				Latitude:  float64(51.417331),
 				Longitude: float64(-0.284835),
 				Timestamp: tempo,
@@ -57,7 +57,7 @@ func TestLocationHandler(t *testing.T) {
 		{
 			"NOTVALID", "Error parsing gps output: Could not parse timestamp\n",
 			http.StatusBadRequest,
-			nil,
+			GPSReading{},
 		},
 	}
 	for _, input := range testInput {

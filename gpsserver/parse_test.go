@@ -13,7 +13,7 @@ func TestParseGPS(t *testing.T) {
 	data, err := ParseGPS(testLine)
 	assert.NoError(t, err)
 	tempo, _ := time.Parse(layout, "030218224537")
-	expected := &GPSReading{
+	expected := GPSReading{
 		Latitude:  float64(51.417331),
 		Longitude: float64(-0.284835),
 		Timestamp: tempo,
