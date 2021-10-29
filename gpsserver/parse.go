@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-const layout string = "020106150405"
-
-const unit float64 = 0.0000005
-
-// GPS gives speed in knots so convert to km/h
-const knotRatio float64 = 1.852001
+const (
+	// GPS gives speed in knots so convert to km/h
+	knotRatio float64 = 1.852001
+	layout    string  = "020106150405"
+	unit      float64 = 0.0000005
+)
 
 // GPSReading is a container for all of the information contained in the
 // output from gps
